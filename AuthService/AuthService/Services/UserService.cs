@@ -4,7 +4,6 @@ using AuthService.Helpers;
 using AuthService.Models;
 using AuthService.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace AuthService.Services
 {
@@ -27,22 +26,59 @@ namespace AuthService.Services
             return users;
         }
 
-        public async Task<string> AddUser(User user)
+        public async Task<string> Login(UserLoginDTO userAccount)
+        {
+            try
+            {
+                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userAccount.Email && u.Password == Hashing.toSHA256(userAccount.Password));
+
+                if (user == null) return string.Empty;
+
+                return user.Id.ToString();
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex.Message);
+                throw;
+            }
+        }
+
+        public async Task SaveRefreshToken(string rfToken ,string id)
+        {
+            var user = _dbContext.Users.FirstOrDefault(u => u.Id == Guid.Parse(id));
+
+            if (user == null) return;
+
+            user.RefreshToken = rfToken;
+            
+            await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task<string> AddUser(UserRegistrationDTO user)
         {
             try
             {
                 var existingUser = _dbContext.Users.FirstOrDefault((x) => x.Email == user.Email || x.Name == user.Name);
 
-                if (existingUser != null && existingUser.Name == user.Name) return ResponseMessages.UsernameAlreadyExists;
-                
-                if (existingUser != null && existingUser.Email == user.Email) return ResponseMessages.EmailAlreadyUsed;
+                if (existingUser != null && existingUser.Name == user.Name)
+                {
+                    _logger.LogInformation(ResponseMessages.UsernameAlreadyExists);
+                    return ResponseMessages.UsernameAlreadyExists;
+
+                }
+
+                if (existingUser != null && existingUser.Email == user.Email)
+                {
+                    _logger.LogInformation(ResponseMessages.EmailAlreadyUsed);
+                    return ResponseMessages.EmailAlreadyUsed;
+                }
 
                 _dbContext.Users.Add(
                     new User
                     {
                         Email = user.Email,
                         Name = user.Name,
-                        Password = user.Password,
+                        Password = Hashing.toSHA256(user.Password),
                         Age = user.Age,
                         ProfileData = new ProfileData
                         {
@@ -51,16 +87,20 @@ namespace AuthService.Services
                             Followers = new List<Guid>(),
                             Posts = new List<Guid>(),
                             Groups = new List<Guid>()
-                        }
+                        },
+                        ProfileDataId = Guid.NewGuid(),
+                        RefreshToken = string.Empty,
                     }
-            );
+                );
 
                 await _dbContext.SaveChangesAsync();
-                return ResponseMessages.UserSuccefullyRegistered;
+
+                _logger.LogInformation(ResponseMessages.UserSuccessfullyRegistered);
+                return ResponseMessages.UserSuccessfullyRegistered;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while adding a user.");
+                _logger.LogError(ex, ex.Message);
                 return ResponseMessages.UserRegistrationFailed;
             }
 

@@ -4,6 +4,12 @@ using AuthService.Services.Interfaces;
 using AuthService.Services;
 using Microsoft.EntityFrameworkCore;
 using System;
+using Microsoft.IdentityModel.Tokens;
+
+using AuthService.Helpers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
+using AuthService.Helpers.HelpersInterfaces;
 
 namespace AuthService
 {
@@ -13,12 +19,41 @@ namespace AuthService
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("LocalDev", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
+
+            //Add token auth
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.TokenValidationParameters = new()
+                    {
+                        ValidateIssuer = false,
+                        ValidateAudience = false,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                        ValidAudience = builder.Configuration["Jwt:Audience"],
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+                    };
+                });
+
+
+
             //Add logging 
             builder.Logging.AddConsole();
             builder.Logging.AddDebug();
             
             //Registerd Services in DI
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<ITokenGenerator, TokenGenerator>();
 
 
             // Add services to the container.
@@ -33,12 +68,21 @@ namespace AuthService
             });
 
 
+            //get current IPv4
+            var myIp = LocalInfo.GetLocalIP();
+            var url = $"http://{myIp}:5204";
+
+            builder.WebHost.UseUrls(url);
+
 
             var app = builder.Build();
 
             var logger = app.Logger;
             logger.LogInformation("Application starting up.");
 
+           
+
+            logger.LogInformation($"Application will run on: {url}");
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -46,10 +90,11 @@ namespace AuthService
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
+
+            app.UseCors("LocalDev");
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 
