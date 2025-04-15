@@ -1,4 +1,4 @@
-﻿namespace AuthService.Models
+﻿namespace AuthService.Models.UserModels
 {
     public class UserRegistrationDTO
     {

@@ -1,4 +1,5 @@
-﻿using AuthService.Models;
+﻿using AuthService.Models.AccountValidationModel;
+using AuthService.Models.UserModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.DbConnection
@@ -19,5 +20,6 @@ namespace AuthService.DbConnection
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<AccountValidationTokens> AccountValidationTokens { get; set; }
     }
 }

@@ -4,17 +4,20 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.InteropServices.JavaScript;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace AuthService.Helpers
 {
     public class TokenGenerator: ITokenGenerator
     {
-        private IConfiguration _config;
+        private readonly IConfiguration _config;
+        private readonly ILogger<TokenGenerator> _logger;
 
-        public TokenGenerator(IConfiguration config)
+        public TokenGenerator(IConfiguration config, ILogger<TokenGenerator> logger)
         {
             _config = config;
+            _logger = logger;
         }
 
 
@@ -72,6 +75,53 @@ namespace AuthService.Helpers
             {
                 return false;
             }
+        }
+
+        public Guid GetUserId(string token)
+        {
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var jwtToken = tokenHandler.ReadJwtToken(token);
+
+                // Extract the 'sub' claim (where you stored the userId during generation)
+                var userId = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    throw new SecurityTokenException("User ID claim not found in token");
+                }
+
+                return new Guid(userId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
+                throw;
+            }
+        }
+    
+
+
+        private static string GenerateRandomEmailToken()
+        {
+            var randomNumber = new byte[32];
+            using var rng = RandomNumberGenerator.Create();
+
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber)
+                .Replace('+', '-')  
+                .Replace('/', '_')  
+                .Replace("=", "");  
+        }
+
+        public static (string RawToken , string HashedToken, DateTime Expiration) GenerateActivationToken()
+        {
+            var rawToken = GenerateRandomEmailToken();
+            var hashedToken = Hashing.ToSHA256(rawToken);
+            var expiration = DateTime.UtcNow.AddMinutes(30); 
+
+            return (rawToken, hashedToken, expiration);
         }
     }
 }

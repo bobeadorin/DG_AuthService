@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace AuthService.Models
+namespace AuthService.Models.UserModels
 {
     public class User
     {
@@ -16,6 +16,9 @@ namespace AuthService.Models
         public Guid ProfileDataId { get; set; }
         public ProfileData? ProfileData { get; set; }
         public string RefreshToken { get; set; }
+
+        public bool IsActivated { get; set; }
+        public DateTime? ActivatedAt { get; set; }
 
     }
 }

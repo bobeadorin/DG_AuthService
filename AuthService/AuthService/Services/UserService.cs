@@ -1,7 +1,7 @@
 ﻿using AuthService.Constant;
 using AuthService.DbConnection;
 using AuthService.Helpers;
-using AuthService.Models;
+using AuthService.Models.UserModels;
 using AuthService.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,15 +26,61 @@ namespace AuthService.Services
             return users;
         }
 
-        public async Task<string> Login(UserLoginDTO userAccount)
+        public async Task<(UserDTO? userData,bool isUser)> GetUserById(Guid id)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
+
+            if (user is null) return (userData: null, isUser: false);
+            
+            var userData = new UserDTO()
+            {
+                Name = user.Name,
+                Email = user.Email,
+                Age = user.Age,
+                ProfileData = user.ProfileData
+            };
+
+            return ( userData, isUser: true);
+        }
+
+        public async Task<Guid> GetUserByEmail(string email)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)  return Guid.Empty;
+
+            return user.Id;
+        }
+
+        public async Task<bool> ActivateAccount(Guid userId)
         {
             try
             {
-                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userAccount.Email && u.Password == Hashing.toSHA256(userAccount.Password));
+                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                if (user is null) return false;
 
-                if (user == null) return string.Empty;
+                user.ActivatedAt = DateTime.UtcNow;
+                user.IsActivated = true;
 
-                return user.Id.ToString();
+                await _dbContext.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
+                return false;
+            }
+        }
+
+        public async Task<(User? UserData, bool IsActivated) > Login(UserLoginDTO userAccount)
+        {
+            try
+            {
+                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userAccount.Email && u.Password == Hashing.ToSHA256(userAccount.Password));
+
+                if (user == null) return (null, false);
+
+                return (user,user.IsActivated);
             }
             catch(Exception ex)
             {
@@ -78,7 +124,7 @@ namespace AuthService.Services
                     {
                         Email = user.Email,
                         Name = user.Name,
-                        Password = Hashing.toSHA256(user.Password),
+                        Password = Hashing.ToSHA256(user.Password),
                         Age = user.Age,
                         ProfileData = new ProfileData
                         {
@@ -90,6 +136,7 @@ namespace AuthService.Services
                         },
                         ProfileDataId = Guid.NewGuid(),
                         RefreshToken = string.Empty,
+                        IsActivated = false,
                     }
                 );
 

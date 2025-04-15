@@ -12,24 +12,27 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AuthService.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250223172455_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250415120653_AddActivationFieldsToUser")]
+    partial class AddActivationFieldsToUser
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.2")
+                .HasAnnotation("ProductVersion", "9.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("AuthService.Models.User", b =>
+            modelBuilder.Entity("AuthService.Models.UserModels.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ActivatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Age")
                         .HasColumnType("int");
@@ -37,6 +40,9 @@ namespace AuthService.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActivated")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -49,14 +55,18 @@ namespace AuthService.Migrations
                     b.Property<Guid>("ProfileDataId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("AuthService.Models.User", b =>
+            modelBuilder.Entity("AuthService.Models.UserModels.User", b =>
                 {
-                    b.OwnsOne("AuthService.Models.ProfileData", "ProfileData", b1 =>
+                    b.OwnsOne("AuthService.Models.UserModels.ProfileData", "ProfileData", b1 =>
                         {
                             b1.Property<Guid>("UserId")
                                 .HasColumnType("uniqueidentifier");
@@ -84,8 +94,7 @@ namespace AuthService.Migrations
                                 .HasForeignKey("UserId");
                         });
 
-                    b.Navigation("ProfileData")
-                        .IsRequired();
+                    b.Navigation("ProfileData");
                 });
 #pragma warning restore 612, 618
         }

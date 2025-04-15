@@ -50,10 +50,13 @@ namespace AuthService
             //Add logging 
             builder.Logging.AddConsole();
             builder.Logging.AddDebug();
-            
+
             //Registerd Services in DI
+            builder.Services.AddScoped<HttpClient>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<ITokenGenerator, TokenGenerator>();
+            builder.Services.AddScoped<IAccountValidationService, AccountValidationService>();
+            builder.Services.AddScoped<IRequestsService,RequestsService>();
 
 
             // Add services to the container.
@@ -78,9 +81,6 @@ namespace AuthService
             var app = builder.Build();
 
             var logger = app.Logger;
-            logger.LogInformation("Application starting up.");
-
-           
 
             logger.LogInformation($"Application will run on: {url}");
             // Configure the HTTP request pipeline.

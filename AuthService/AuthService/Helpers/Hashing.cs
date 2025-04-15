@@ -6,7 +6,7 @@ namespace AuthService.Helpers
 
     public static class Hashing
     {
-        public static string toSHA256(string password)
+        public static string ToSHA256(string password)
         {
             using var sha256 = SHA256.Create();
 
@@ -21,5 +21,6 @@ namespace AuthService.Helpers
 
             return sb.ToString();
         }
+
     }
 }

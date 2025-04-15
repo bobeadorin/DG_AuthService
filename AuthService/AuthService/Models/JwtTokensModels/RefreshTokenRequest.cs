@@ -1,4 +1,4 @@
-﻿namespace AuthService.Models
+﻿namespace AuthService.Models.JwtTokensModels
 {
     public class RefreshTokenRequest
     {
